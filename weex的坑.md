@@ -2,7 +2,7 @@
 随着react-native的兴起，国内的互联网大厂阿里巴巴也出了个类似的东西：weex，采用js语言，使用vue.js框架进行跨平台开发，
 Android和ios共用一套代码。这篇文章记录作者使用weex开发Android应用中遇到的各种问题。欢迎大家讨论，也可以联系作者，作者的个人网站：
 [http://blog.liuzhenhua.net](http://blog.liuzhenhua.net)，github地址：[https://github.com/liuzhenhuanet](https://github.com/liuzhenhuanet)，
-邮箱[liuzhenhuanet@gmail.com](mail://liuzhenhuanet@gmail.com)
+邮箱[liuzhenhuanet@gmail.com](mailto://liuzhenhuanet@gmail.com)
 
 > 作者所参考的weex文档地址：[http://weex-project.io/cn/](http://weex-project.io/cn/)，以下所有讨论均针对该文档。
 
@@ -24,12 +24,15 @@ weex的内建模块dom下有一个`getComponentRect(ref, callback)`方法，文�
 (https://weex-project.io/cn/references/modules/dom.html#getComponentRect-ref-callback-v0-9-4)
 ,是用来获取元素的布局信息的，例如`width`，`height`，`top`等，文档里还特地举了个例子，`如果想要获取到 Weex 容器的布局信息，
 可以指定 ref='viewport'`，这个例子是可以正常运行的，所以我抱着试一试的心态，给一个`div`元素设置了`ref`属性为`test`，
-然后就调用`getComponentRect`方法，把`test`作为字符串传入第一个参数，结果报错了，告诉我`errMsg: "Component does not exist`，
+然后就调用`getComponentRect`方法，把`test`作为字符串传入第一个参数，结果报错了，告诉我`errMsg: "Component does not exist`。
+
 我检查了一遍又一遍，确认我的ref属性没有写错，而且没有同名ref属性被设置，我只好设置断点去检查代码运行的上下文，结果什么信息
-都没有找到，不过发现了`this.$refs.test`的属性列表里有一个属性叫做`ref`，它的值是一个字符串，但字符串是一个整数，这时候我
-想起了Android里的id，Android里的id最终引用的时候其实就是一个整数，我想这里可能也是需要一个整数，最后我把`this.$refs.test.ref`
-作为`getComponentRect`第一个参数传入，终于获取到了我想要的信息。真是浪费了我好多时间，还浪费时间在这里记录一下。真的不知道
-为什么不直接告诉我传什么值进去，还要特地举例用字符串`viewport`作为参数，所以我天真的以为只要把我设置的`ref`属性值作为
+都没有找到，不过发现了`this.$refs.test`的属性列表里有一个属性叫做`ref`，它的值是一个字符串，但字符串是一个整数。
+
+这时候我想起了Android里的id，Android里的id最终引用的时候其实就是一个整数，我想这里可能也是需要一个整数，最后我把`this.$refs.test.ref`
+作为`getComponentRect`第一个参数传入，终于获取到了我想要的信息。
+
+真是浪费了我好多时间，还浪费时间在这里记录一下。真的不知道为什么不直接告诉我传什么值进去，还要特地举例用字符串`viewport`作为参数，所以我天真的以为只要把我设置的`ref`属性值作为
 字符串传入就能得到我想要的，fuck weex。
 
 ### scroller组件bug
