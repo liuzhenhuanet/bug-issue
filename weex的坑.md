@@ -40,3 +40,15 @@ weex的内建模块dom下有一个`getComponentRect(ref, callback)`方法，文�
 的问题就是页面几乎不能滚动和下拉，只有将手指放到没有子元素的位置才能使用下拉刷新功能，我猜测可能是touch事件被拦截了，最后的
 解决办法也十分粗暴，就桑把`scroller`组件换成了`list`组件，另外说一句，之前的`scroller`写法在iOS上表现正常，所以这个
 应该是weex在Android上特有的bug。
+
+### boolean值引发的问题
+这个问题不知道是应该归咎weex还是vue，又或者是js。具体情况是这样子的，我在一个标签上绑定了一个变量，
+```
+<tag :variable="value"></tag>
+<other-tag :variable="!value"></other-tag>
+```
+value这个变量的值是从持久化存储获取的，所以读取出来是一个字符串，为"true"或者"false"，当value="false"时，第一个标签tag
+的variable属性获取到的值自动转换为`false`了，而第二个标签的variable属性由于有`!`符号，首先将字符串"false"转换为
+Boolean值`true`，最终variable得到的值同样是`false`，按照代码的意思来，应该期盼的是tag和other-tag的variable属性
+值使用相反，但是当value='false'时却得到了相同的结果。 既然找到了原因，那修改方法也很简单，就是value获取值的时候不要直接
+赋值字符串，而是先手动转换为Boolean类型的值。
