@@ -43,7 +43,7 @@ weex的内建模块dom下有一个`getComponentRect(ref, callback)`方法，文�
 
 ### boolean值引发的问题
 这个问题不知道是应该归咎weex还是vue，又或者是js。具体情况是这样子的，我在一个标签上绑定了一个变量，
-```
+```html
 <tag :variable="value"></tag>
 <other-tag :variable="!value"></other-tag>
 ```
