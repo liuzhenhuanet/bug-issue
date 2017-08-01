@@ -3,8 +3,7 @@ Provider作为Android四大组件之一，一般开发过程中遇到的不多�
 有时候还是需要用到它的，只要是代码，必定有坑，所以这篇文章记录了作者开发过程中遇到的与
 Provider相关的坑。
 
-作者邮箱：<liuzhenhuanet@gmail.com> github：[https://github.com/liuzhenhuanet]
- 个人网站：[http://blog.liuzhenhua.net] 欢迎来找我交流。
+作者邮箱：<liuzhenhuanet@gmail.com> github：[https://github.com/liuzhenhuanet](https://github.com/liuzhenhuanet) 个人网站：[http://blog.liuzhenhua.net](http://blog.liuzhenhua.net) 欢迎来找我交流。
 
 ### Provider在Manifest中声明权限
 Android 6.0以后加入了动态权限，仅仅在manifest文件中申明权限已经不够了，还需要在运行时

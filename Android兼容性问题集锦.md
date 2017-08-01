@@ -2,7 +2,7 @@
 Android相比iOS开发困难的地方在于Android手机厂商众多，第三方ROM众多，版本分裂严重，导致UI适配
 和非UI兼容问题多而繁杂。本文记录了作者在Android开发中遇到的兼容性问题，包括UI的和非UI的。
 
-作者邮箱：<liuzhenhuanet@gmail.com>  github：[https://github.com/liuzhenhuanet]  个人网站： [http://blog.liuzhenhua.net]
+作者邮箱：<liuzhenhuanet@gmail.com>  github：[https://github.com/liuzhenhuanet](https://github.com/liuzhenhuanet)  个人网站： [http://blog.liuzhenhua.net](http://blog.liuzhenhua.net)
 
 ### Application中判断进程名字
 在`Application`的`onCreate`方法里，一般会进行很多初始化工作，包括自己的代码以及
