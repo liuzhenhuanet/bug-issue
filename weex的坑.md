@@ -52,3 +52,81 @@ value这个变量的值是从持久化存储获取的，所以读取出来是一
 Boolean值`true`，最终variable得到的值同样是`false`，按照代码的意思来，应该期盼的是tag和other-tag的variable属性
 值使用相反，但是当value='false'时却得到了相同的结果。 既然找到了原因，那修改方法也很简单，就是value获取值的时候不要直接
 赋值字符串，而是先手动转换为Boolean类型的值。
+
+### 不支持Android View的`View.INVISIBLE`和`View.GONE`
+背景是这样的，我之前在做一个搜索页，搜索结果分为好几类，需要在同一个页面内使用标签页分别
+展示“综合搜索结果”、“类型1搜索结果”和“类型2搜索结果”。最初使用了3个list标签分别存放不
+同类别的结果，为每个list设置`v-if`属性控制显示当前标签下的结果。最终的效果就是每个标签
+页第一次加载的时候表现还算正常，但是加载完成后在不同标签页之间切换就表现得很卡，下一个标
+签页是一个一个item的加载出来，倒是有种动画的效果（哈哈哈...）。 分析原因是因为`v-if`
+设置为`false`会被remove掉，当设置为`true`时又重新构建，所以切换时上一个页面已经remove，
+但是下一个页面正在构建，所以就出现了这种`动画`效果。
+
+除了`v-if`之外，`vue.js`还提供了`v-show`还控制标签是否显示，很可惜，weex并没有提供
+`v-show`的实现，所以我就想能不能自己覆盖weex的`div`组件，让其在Android平台上能够实现
+`View.VISIBLE`、`View.INVISIBLE`和`View.GONE`之间的切换。
+
+说干就干，实现起来其实很简单，我之前已经覆盖了`div`组件，所以这次只要增加一个属性就可以了，
+在组件中，我新增了一个属性，当属性值为`false`时通过组件的`getRealView()`获取`View`并
+设置`visible`为`View.GONE`，反之设置为`View.VISIBLE`，这样就实现了只隐藏`View`
+但是不会移除，而且不占用视图布局空间。
+
+结果总是出人意料，除了第一个list显示了之外，切换到其他list都不显示，调试组件java端的实现，
+设置visible属性确实生效了，但是为什么不显示呢？遇到这种问题首先就是检查`View`的宽高是
+否正常，是否都大于0，经过检查，一切正常。既然`View`的宽高正常，visible属性也设置为了
+`View.VISIBLE`，那可能是`View`不在正确的位置上，但是不可能啊，没人移动它的位置啊，它
+处于正常的标签位置处，也没有设置`position`属性。怀着疑惑以及十分懒散的心情，去查看了
+`View`的位置，一看吓我一跳，不显示的list的`top`居然是3000多，这早超出了我的屏幕高度了，
+难怪我看不到。是什么导致了`top`值这么大？肯定有原因的。很容易就发现是因为`marginTop`
+值非常大导致的，但是问题又来了，我没有设置它的`marginTop`属性啊。随后我在weex代码里面
+设置了它的`marginTop`为20px，再去java代码检查一下`marginTop`属性，发现这个属性值
+稍微变大了一些，刚好增加了20px转换成Android px的值，这是为何？
+
+`marginTop`这个属性到底是谁设置的？在哪里设置的？最有可能就是它的`parent`设置的。weex
+的`div`标签能够竖向布局、横向布局的原理是什么？它本身是一个`FrameLayout`，不像Android
+里的`LinearLayout`自带竖向和横向布局能力，那么它肯定是使用了其他手段实现的，经过查看
+源代码以及之前的调试结果，判断出它就是通过增加子`View`的`marginTop`来实现竖向布局，通过
+增加子`View`的`marginLeft`来实现横向布局。总算弄清楚所有问题的起因了，就是第一个list
+占据了巨大空间，导致第二个list计算时`marginTop`特别大，从而挤出了屏幕。虽然知道了原因，
+但是想要自己实现visible控制并不容易，因为weex在计算`marginTop`时把`View.GONE`的`View`
+也计算在内了。希望weex官方早日提供`v-show`实现
+
+### 神奇的`position`属性
+`position`是一个枚举属性，取值为`static` `absolute` `fixed` `relative`,在`html`
+里`position`的默认值是`static`，在`weex`里它的默认值是`relative`。
+
+虽然weex提供了`position`，但是在某些情况下表现的十分诡异，会出现一些具有默认`position`
+属性的元素位置出现异常。一般来说，我不会使用这个属性，正常的布局能满足要求，之所以使用它
+是因为我上文提到的需要实现“搜索列表”展示，我想通过设置`position`属性为`absolute`让list
+脱离正常的标签流，实现三个list在同一个位置叠加显示。
+
+我们的weex页面根标签具有`absolute`的`position`属性，最终的页面结构：
+```html
+<div style="position: absolute">
+    <div>搜索框</div>
+    <div>3个搜索结果标签选择按钮</div>
+
+    <div>
+        <list style="position: absolute">搜索结果1</list>
+        <list style="position: absolute">搜索结果2</list>
+        <list style="position: absolute">搜索结果3</list>
+    </div>
+
+    <!-- 之前就有的 -->
+    <div style="position: absolute">搜索历史</div>
+    <div style="position: absolute">搜索提示，热门搜索，标签等</div>
+
+</div>
+```
+最初这样的写的时候，无论我如何设置`top`，`left`，`margin`这些属性，所有的列表就是一
+个都不显示，如果把`absolute`修改成`fixed`就显示了，至今不知道是什么原因导致的，后来
+我观察到“搜素历史”这个`div`，同样的是`absolute`为什么它就可以显示，于是我找出了他们
+唯一不同点就是list外面还有个`div`包裹，我把外层的`div`去掉之后就能正常显示了，这不科学，
+weex里的`position`属性实现有bug。
+
+正当我被自己的机智折服时，突然发现“3个搜索结果标签选择按钮”这个`div`看不见了，但是还是
+占着它原本的位置的，嗯，一定是幻觉，再试试。哈哈，我就说是幻觉，这不出现了吗？不对，它
+怎么跑到list底下去了，也就是页面的最底部，这不符合布局结构啊。后来分析，因为这个`div`
+设置了v-if，会根据条件切换是否显示状态，从而将它从父组件中去除了，当再次出现时因为list
+这些标签是`absolute`的，所以weex将其重新View tree时将这个div放置的`children position`
+出错了，weex又给我留坑。
