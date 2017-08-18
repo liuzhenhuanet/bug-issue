@@ -130,3 +130,97 @@ weex里的`position`属性实现有bug。
 设置了v-if，会根据条件切换是否显示状态，从而将它从父组件中去除了，当再次出现时因为list
 这些标签是`absolute`的，所以weex将其重新View tree时将这个div放置的`children position`
 出错了，weex又给我留坑。
+
+### `loading`和`refresh`组件的`v-if`带来的问题
+事先说明，这个问题只在Android上有
+
+`loading`和`refresh`设置`v-if`为`false`后，`WXSwipeLayout`会将`header`或`footer`
+remove，从而不再展示`loading`或`refresh`组件，但是当`v-if`再次被设置为`true`时，
+weex却只是在`BounceRecyclerView`类的`setFooterView`方法中重新设置了`footer`或
+`header`的样式属性，却没有将其重新add进去，导致了`loading`或`refresh`组件不可见。
+修改代码如下（重写`BounceRecyclerView`的`setFooterView`方法）：
+```java
+@Override
+public void setFooterView(WXComponent loading) {
+ setLoadmoreEnable(true);
+ if (swipeLayout == null) {
+     return;
+ }
+ // copy from BounceRecyclerView#setFooterView
+ WXRefreshView refreshView = swipeLayout.getFooterView();
+ if (refreshView != null) {
+     // 增加判断，如果没有被add则重新add到swipeLayout
+     if (refreshView.getParent() == null) {
+         swipeLayout.addView(refreshView);
+     }
+     ImmutableDomObject immutableDomObject = loading.getDomObject();
+     if (immutableDomObject != null) {
+         int loadingHeight = (int) immutableDomObject.getLayoutHeight();
+         swipeLayout.setLoadingHeight(loadingHeight);
+         String colorStr = (String) immutableDomObject.getStyles().get(Constants.Name.BACKGROUND_COLOR);
+         String bgColor = WXUtils.getString(colorStr, null);
+         if (bgColor != null) {
+             if (!TextUtils.isEmpty(bgColor)) {
+                 int colorInt = WXResourceUtils.getColor(bgColor);
+                 if (!(colorInt == Color.TRANSPARENT)) {
+                     swipeLayout.setLoadingBgColor(colorInt);
+                 }
+             }
+         }
+         // 如果之前v-if被设置过为true，则不再进行loading组件初始化，不然会造成有多个loading-indicator
+         boolean existBefore = ((ViewGroup) refreshView.getChildAt(0)).getChildCount() > 0;
+         if (!existBefore) {
+             refreshView.setRefreshView(loading.getHostView());
+         }
+     }
+ }
+}
+```
+
+### list组件执行上拉加载更多后列表不向上滚动
+`list`组件给我们提供了方便的下拉刷新、下拉加载更多的功能，但是当上拉加载更多加载成功后
+`loading`组件消失，列表又回来到了原来的位置，让人感觉上拉加载好像没有成功，因为没有
+看到新数据被加载出来。
+
+我的解决办法就是在上拉加载更多结束后，将列表向上滚动`loading`组件高度的距离，这样原本
+显示`loading`组件的位置刚好被新内容的顶部取代，让人很自然地就看到了由于上拉操作出现了
+新的item。代码如下（重新`BounceRecyclerView`的`onLoadmoreComplete`方法）：
+```java
+@Override
+public void onLoadmoreComplete() {
+ super.onLoadmoreComplete();
+ // fix “加载更多”后list自动向上滚动一个item
+ final WXRecyclerView recycleView = getInnerView();
+ if (recycleView != null) {
+     int footerViewHeight = DisplayUtil.dp2px(35);
+     if (recycleView.getParent() instanceof WXSwipeLayout) {
+         View footerView = ((WXSwipeLayout) getInnerView().getParent()).getFooterView();
+         if (footerView != null && footerView.getHeight() > DisplayUtil.dp2px(10)) {
+             footerViewHeight = footerView.getHeight();
+         }
+     }
+     final int scrollHeight = footerViewHeight;
+     Utils.getMainHandler().postDelayed(new Runnable() {
+         @Override
+         public void run() {
+             recycleView.smoothScrollBy(0, scrollHeight);
+         }
+     }, 300);
+ }
+}
+```
+
+这个问题Android和iOS都有，目前只在Android解决了该问题
+
+### 当圆角遇到图片
+显示圆角是一个很常见的需求，在weex里实现圆角也非常简单，跟标准的`css`写法一样，只要设置
+`css`的`border-radius`值即可。
+
+而我却在Android API为24的手机上遇到了这样的问题，`div`嵌套`image`标签，`div`被设置了
+圆角，但是里面的`image`居然没有被圆角裁剪，导致整个`div`看起来好像没有设置圆角。目前只在
+API为24的Android手机上遇到，23，和25以及其他版本都没有问题。
+
+既然知道了问题原因，那么解决起来应该很简单，在内测需要圆角裁剪的`image`的特定角也设置同样
+弧度的圆角即可。问题有来了，虽然这么做在所有Android手机上表现得都是自己想要的，但是在iOS
+上却发现`image`的四个角都被设置了圆角，这不是我想要的，因为我的`image`只是占据`div`的
+上册，只想`image`的左上角和右上角有圆角。
