@@ -234,3 +234,30 @@ API为24的Android手机上遇到，23，和25以及其他版本都没有问题�
 问题出现：使用weex开发，需要播放视屏，播放视频使用到了SurfaceView，由于Weex页面是动态
 渲染的，在API低于23的手机上动态加入SurfaceView会闪现黑屏，但是如果页面中原本就存在
 SurfaceView，这时候再动态加入SurfaceView不会出现闪现黑屏现象。
+
+### DELETE方法不支持body参数（有病吧）
+```java
+if ("POST".equals(request.method) || "PUT".equals(request.method) || "PATCH".equals(request.method)) {
+      connection.setRequestMethod(request.method);
+      if (request.body != null) {
+            if (listener != null) {
+                listener.onHttpUploadProgress(0);
+            }
+            connection.setDoOutput(true);
+            DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+            //TODO big stream will cause OOM; Progress callback is meaningless
+            out.write(request.body.getBytes());
+            out.close();
+            if (listener != null) {
+                listener.onHttpUploadProgress(100);
+            }
+      }
+}
+```
+
+### 为图片设置placeholder
+```html
+<image src="" placeholder="xxx"></image>
+```
+
+### 后台返回非200~299状态码后客户端不能获取信息
