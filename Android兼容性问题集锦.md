@@ -37,4 +37,16 @@ public static String currentProcess(Context context) {
 如果返回null，那么不管是应该在主进程中需要初始化的工作还是其他进程中需要初始化的工作都做一遍，
 一方万一，避免某些机型不能正常初始化。
 
-### 敬请期待……
+### API 25中的WindowManager.LayoutParams.TYPE_TOAST类型window
+在API 25，也就是Android7.1.1中，如果同时显示多个类型为`WindowManager.LayoutParams.TYPE_TOAST`
+的window，会抛出`android.view.WindowManager$BadTokenException: Unable to add window -- window android.view.ViewRootImpl$W@93d8626 has already been added`
+异常导致应用崩溃。  
+这个应该是API 25中的bug，因为在API 24和26中都不会出现这种情况，文档中也没有说明会这种
+情况会抛出异常。  
+
+如何发现这个问题的？  
+我们的应用中的Toast使用的自定义的Toast，从屏幕顶部弹出，类似iOS系统通知。但某些代码中
+依然使用了系统的Toast，这某个情景下这两种Toast会同时弹出，由于他们不知道彼此，不能彼此
+取消，所以在API 25的机器上导致了崩溃。  
+
+### 敬请期待...
