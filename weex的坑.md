@@ -261,3 +261,11 @@ if ("POST".equals(request.method) || "PUT".equals(request.method) || "PATCH".equ
 ```
 
 ### 后台返回非200~299状态码后客户端不能获取信息
+
+### Android 7.1.1,div圆角子组件可以在圆角外显示
+
+### 报t.document.taskCenter.send undefined
+由于js framework中要调用`t.document.taskCenter.send`，但是taskCenter为undefined。  
+该问题发生的场景是：在weex第二个页面向前一个页面传了一个对象，该对象包含一些方法，执行这些方法需要调用native方法支持，这个时候回到前一个页面
+调用了返回对象的方法，报undefined的。我猜测是这些方法里应用了第二个页面的一些东西，但是执行native方法需要用到，回到上一个页面时这些必要的
+东西被销毁了。
